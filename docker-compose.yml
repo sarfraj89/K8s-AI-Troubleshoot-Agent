@@ -1,0 +1,48 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      # Host port 8001 avoids a clash with the separate sre-agent stack on 8000.
+      # Container still listens on 8000; only the host-side mapping changed.
+      - "8001:8000"
+    volumes:
+      - ./backend:/app
+      # Live, read-only view of the host kubeconfig. The backend copies this to
+      # /root/.kube/config at runtime and rewrites kind clusters' 127.0.0.1 API
+      # servers to their in-network <cluster>-control-plane:6443 addresses
+      # (see app/kubernetes/kubeconfig_sync.py), so all local clusters appear
+      # and are reachable without a static snapshot that goes stale.
+      - ~/.kube:/host-kube:ro
+    env_file:
+      - ./backend/.env
+    environment:
+      - KUBECONFIG=/root/.kube/config
+      - HOST_KUBECONFIG=/host-kube/config
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - default
+      - kind
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    env_file:
+      - ./frontend/.env
+    environment:
+      # VITE_BACKEND_URL is consumed by the browser (the React app runs on the
+      # host), so it must use the host-published port, not the in-network name.
+      # Use 127.0.0.1 (not localhost) to force IPv4 — Docker's IPv6 (::1) port
+      # proxy is unreliable on this host and yields axios "Network Error".
+      - VITE_BACKEND_URL=http://127.0.0.1:8001
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+networks:
+  # The 'kind' bridge network is created by kind; joining it lets the backend
+  # reach the cluster's API server by its in-network container name.
+  kind:
+    external: true
