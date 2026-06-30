@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
+    DEMO_MODE: bool = False
     # Google Gemini (primary LLM provider)
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
@@ -13,6 +14,7 @@ class Settings(BaseSettings):
     INSFORGE_URL: Optional[str] = None
     INSFORGE_API_KEY: Optional[str] = None
     INSFORGE_ANON_KEY: Optional[str] = None
+    FRONTEND_URL: Optional[str] = None
 
     @property
     def kubeconfig(self) -> Optional[str]:

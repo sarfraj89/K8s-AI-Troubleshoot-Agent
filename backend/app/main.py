@@ -6,6 +6,16 @@ from app.api import health, investigate
 from app.core.config import settings
 from app.kubernetes.kubeconfig_sync import sync_kubeconfig
 
+
+def _allowed_origins() -> list[str]:
+    origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    if settings.FRONTEND_URL:
+        origins.append(settings.FRONTEND_URL.rstrip("/"))
+    return origins
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="AI Kubernetes Agent API",
@@ -15,7 +25,7 @@ def create_app() -> FastAPI:
     # Configure CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # In production, specify actual origins
+        allow_origins=_allowed_origins(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -28,6 +38,9 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_event():
         logger.info("Starting AI Kubernetes Agent API...")
+        if settings.DEMO_MODE:
+            logger.info("Demo mode enabled; skipping kubeconfig sync")
+            return
         sync_kubeconfig()
 
     return app

@@ -3,9 +3,11 @@ from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from app.ai.service import diagnose
+from app.core.config import settings
 from app.kubernetes.investigation_service import run_investigation
 from app.kubernetes.kubeconfig_sync import sync_kubeconfig
 from app.kubernetes.kubectl_executor import list_kube_contexts, run_kubectl
+from app.kubernetes.mock_investigation import DEMO_CONTEXT, run_mock_investigation
 from app.services.progress_publisher import ProgressPublisher
 
 router = APIRouter()
@@ -74,6 +76,12 @@ async def list_clusters():
     """
     List all available Kubernetes contexts from the kubeconfig file.
     """
+    if settings.DEMO_MODE:
+        return {
+            "contexts": [DEMO_CONTEXT],
+            "count": 1,
+        }
+
     # Pick up any clusters created since startup and refresh kind addresses.
     sync_kubeconfig()
 
@@ -107,11 +115,16 @@ async def investigate(request: InvestigationRequest | None = None):
     context = request.context if request else None
 
     # Ensure the kubeconfig reflects current clusters before investigating.
-    sync_kubeconfig()
+    if not settings.DEMO_MODE:
+        sync_kubeconfig()
 
     with ProgressPublisher(progress_channel) as progress:
         try:
-            investigation = run_investigation(progress.publish, context=context)
+            investigation = (
+                run_mock_investigation(progress.publish, context=context)
+                if settings.DEMO_MODE
+                else run_investigation(progress.publish, context=context)
+            )
         except FileNotFoundError:
             progress.publish("complete", "error", "kubectl not found")
             raise HTTPException(
