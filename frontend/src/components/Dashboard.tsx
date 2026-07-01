@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AlertCircle, Loader2, LogOut, CheckCircle2, Terminal } from 'lucide-react';
 import { ProgressTracker } from './ProgressTracker';
 import { DiagnosisCard } from './DiagnosisCard';
@@ -17,6 +17,7 @@ export function Dashboard() {
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [selectedContext, setSelectedContext] = useState<string | null>(null);
+  const [selectedContextReady, setSelectedContextReady] = useState(false);
   const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
   const {
     progress,
@@ -25,6 +26,10 @@ export function Dashboard() {
     completeProgress,
     failProgress,
   } = useInvestigationProgress(user?.id);
+
+  const handleContextReadyChange = useCallback((ready: boolean) => {
+    setSelectedContextReady(ready);
+  }, []);
 
   const handleInvestigate = async () => {
     if (!user?.id) {
@@ -137,12 +142,13 @@ export function Dashboard() {
             <ClusterSelector
               selectedContext={selectedContext}
               onSelect={setSelectedContext}
+              onReadyChange={handleContextReadyChange}
             />
           </div>
 
           <button
             onClick={handleInvestigate}
-            disabled={isLoading || !selectedContext}
+            disabled={isLoading || !selectedContext || !selectedContextReady}
             className="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:from-slate-800 disabled:to-slate-800/80 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/30 transition-all duration-200 active:scale-[0.98] flex items-center gap-2"
           >
             {isLoading ? (
@@ -150,7 +156,7 @@ export function Dashboard() {
             ) : (
               <Terminal className="w-4 h-4 text-white" />
             )}
-            {isLoading ? 'Investigating...' : 'Start Investigation'}
+            {isLoading ? 'Investigating...' : selectedContextReady ? 'Start Investigation' : 'Select Ready Cluster'}
           </button>
         </div>
 

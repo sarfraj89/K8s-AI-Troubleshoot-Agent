@@ -11,6 +11,10 @@ ProgressCallback = Callable[[str, str, str], None]
 DEMO_CONTEXT = {
     "name": "demo-crashloop-cluster",
     "is_current": True,
+    "cluster": "demo-crashloop-cluster",
+    "namespace": "production",
+    "reachable": True,
+    "status": "ready",
 }
 
 

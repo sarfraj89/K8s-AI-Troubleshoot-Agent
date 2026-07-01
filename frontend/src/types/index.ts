@@ -44,6 +44,12 @@ export interface InvestigationResponse {
 export interface KubeContext {
   name: string;
   is_current: boolean;
+  cluster?: string;
+  namespace?: string;
+  user?: string;
+  reachable?: boolean;
+  status?: 'ready' | 'unreachable';
+  error?: string;
 }
 
 // Investigation Progress Types

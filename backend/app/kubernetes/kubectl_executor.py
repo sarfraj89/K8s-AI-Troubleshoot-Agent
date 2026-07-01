@@ -125,7 +125,35 @@ def run_kubectl_json(args: list[str], timeout: int = 60, context: str | None = N
     return result
 
 
-def list_kube_contexts() -> list[dict]:
+def _context_metadata() -> dict[str, dict[str, str]]:
+    """Return kubeconfig metadata keyed by context name."""
+    result = run_kubectl_json(["config", "view"])
+    if not result.success:
+        return {}
+
+    metadata: dict[str, dict[str, str]] = {}
+    for item in (result.data or {}).get("contexts", []):
+        name = item.get("name")
+        context = item.get("context", {})
+        if not name:
+            continue
+        metadata[name] = {
+            "cluster": context.get("cluster", ""),
+            "user": context.get("user", ""),
+            "namespace": context.get("namespace", "default"),
+        }
+    return metadata
+
+
+def _context_reachability(name: str) -> tuple[bool, str | None]:
+    """Check whether kubectl can reach the selected context."""
+    result = run_kubectl(["get", "--raw=/readyz"], timeout=8, context=name)
+    if result.success:
+        return True, None
+    return False, result.error or result.stderr or "Unable to reach Kubernetes API server."
+
+
+def list_kube_contexts(include_status: bool = False) -> list[dict]:
     """
     Parse the kubeconfig file and return available contexts.
 
@@ -139,12 +167,21 @@ def list_kube_contexts() -> list[dict]:
     current_result = run_kubectl(["config", "current-context"])
     current_context = current_result.stdout.strip() if current_result.success else ""
 
+    metadata = _context_metadata()
     contexts = []
     for line in result.stdout.splitlines():
         name = line.strip()
         if name:
-            contexts.append({
+            context = {
                 "name": name,
                 "is_current": name == current_context,
-            })
+                **metadata.get(name, {}),
+            }
+            if include_status:
+                reachable, error = _context_reachability(name)
+                context["reachable"] = reachable
+                context["status"] = "ready" if reachable else "unreachable"
+                if error:
+                    context["error"] = error
+            contexts.append(context)
     return contexts

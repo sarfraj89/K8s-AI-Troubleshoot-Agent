@@ -20,6 +20,14 @@ class InvestigationRequest(BaseModel):
     context: str | None = None
 
 
+def _find_context(context_name: str | None) -> dict | None:
+    """Return the selected kube context from the synced kubeconfig."""
+    contexts = list_kube_contexts(include_status=True)
+    if context_name:
+        return next((ctx for ctx in contexts if ctx["name"] == context_name), None)
+    return next((ctx for ctx in contexts if ctx.get("is_current")), contexts[0] if contexts else None)
+
+
 def _friendly_kubectl_error(error: str | None) -> str:
     """Convert raw kubectl errors into beginner-friendly messages."""
     if not error:
@@ -93,7 +101,7 @@ async def list_clusters():
             detail=_friendly_kubectl_error(health_check.error),
         )
 
-    contexts = list_kube_contexts()
+    contexts = list_kube_contexts(include_status=True)
 
     return {
         "contexts": contexts,
@@ -117,6 +125,22 @@ async def investigate(request: InvestigationRequest | None = None):
     # Ensure the kubeconfig reflects current clusters before investigating.
     if not settings.DEMO_MODE:
         sync_kubeconfig()
+        selected_context = _find_context(context)
+        if not selected_context:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "Selected Kubernetes context was not found. "
+                    "Refresh the cluster list and choose an available context."
+                ),
+            )
+        if not selected_context.get("reachable"):
+            detail = selected_context.get("error") or "Kubernetes API server is not reachable."
+            raise HTTPException(
+                status_code=503,
+                detail=_friendly_kubectl_error(detail),
+            )
+        context = selected_context["name"]
 
     with ProgressPublisher(progress_channel) as progress:
         try:

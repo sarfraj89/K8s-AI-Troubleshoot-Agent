@@ -2,9 +2,7 @@ services:
   backend:
     build: ./backend
     ports:
-      # Host port 8001 avoids a clash with the separate sre-agent stack on 8000.
-      # Container still listens on 8000; only the host-side mapping changed.
-      - "8001:8000"
+      - "8000:8000"
     volumes:
       - ./backend:/app
       # Live, read-only view of the host kubeconfig. The backend copies this to
@@ -36,7 +34,7 @@ services:
       # host), so it must use the host-published port, not the in-network name.
       # Use 127.0.0.1 (not localhost) to force IPv4 — Docker's IPv6 (::1) port
       # proxy is unreliable on this host and yields axios "Network Error".
-      - VITE_BACKEND_URL=http://127.0.0.1:8001
+      - VITE_BACKEND_URL=http://127.0.0.1:8000
     depends_on:
       - backend
     command: npm run dev -- --host 0.0.0.0
