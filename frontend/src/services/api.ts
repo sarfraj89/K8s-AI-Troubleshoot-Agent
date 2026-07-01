@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { InvestigationResponse, KubeContext } from '../types';
+import { ClusterListResponse, InvestigationResponse } from '../types';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -12,7 +12,7 @@ export const investigationApi = {
   /**
    * Fetch available Kubernetes contexts from kubeconfig
    */
-  async getClusters(): Promise<{ contexts: KubeContext[]; count: number }> {
+  async getClusters(): Promise<ClusterListResponse> {
     try {
       const { data } = await apiClient.get('/clusters');
       return data;

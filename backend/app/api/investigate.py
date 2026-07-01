@@ -88,6 +88,8 @@ async def list_clusters():
         return {
             "contexts": [DEMO_CONTEXT],
             "count": 1,
+            "mode": "demo",
+            "demo_mode": True,
         }
 
     # Pick up any clusters created since startup and refresh kind addresses.
@@ -106,6 +108,8 @@ async def list_clusters():
     return {
         "contexts": contexts,
         "count": len(contexts),
+        "mode": "local",
+        "demo_mode": False,
     }
 
 

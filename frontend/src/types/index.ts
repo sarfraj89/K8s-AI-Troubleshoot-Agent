@@ -52,6 +52,13 @@ export interface KubeContext {
   error?: string;
 }
 
+export interface ClusterListResponse {
+  contexts: KubeContext[];
+  count: number;
+  mode?: 'local' | 'demo';
+  demo_mode?: boolean;
+}
+
 // Investigation Progress Types
 export type ProgressStep = 'pods' | 'logs' | 'events' | 'deployments' | 'network' | 'ai' | 'complete';
 

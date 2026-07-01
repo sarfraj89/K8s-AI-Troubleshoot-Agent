@@ -13,13 +13,15 @@ export function ClusterSelector({ selectedContext, onSelect, onReadyChange }: Cl
   const [contexts, setContexts] = useState<KubeContext[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   const fetchClusters = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { contexts: fetched } = await investigationApi.getClusters();
+      const { contexts: fetched, demo_mode } = await investigationApi.getClusters();
       setContexts(fetched);
+      setIsDemoMode(Boolean(demo_mode));
 
       // Auto-select current context if nothing selected yet
       if (!selectedContext) {
@@ -31,6 +33,7 @@ export function ClusterSelector({ selectedContext, onSelect, onReadyChange }: Cl
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load clusters');
+      setIsDemoMode(false);
     } finally {
       setLoading(false);
     }
@@ -102,7 +105,7 @@ export function ClusterSelector({ selectedContext, onSelect, onReadyChange }: Cl
         >
           {contexts.map((ctx) => (
             <option key={ctx.name} value={ctx.name} className="bg-slate-900 text-slate-200">
-              {ctx.name}{ctx.is_current ? ' (current)' : ''}{ctx.reachable ? '' : ' - unreachable'}
+              {ctx.name}{ctx.is_current ? ' (current)' : ''}{isDemoMode ? ' - demo' : ctx.reachable ? '' : ' - unreachable'}
             </option>
           ))}
         </select>
@@ -110,6 +113,19 @@ export function ClusterSelector({ selectedContext, onSelect, onReadyChange }: Cl
           <ChevronDown className="w-4 h-4 text-slate-500" />
         </div>
       </div>
+
+      {isDemoMode && (
+        <div className="max-w-xl flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+          <AlertCircle className="w-5 h-5 text-amber-450 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-300">Demo backend connected</p>
+            <p className="text-xs text-amber-200/80 mt-1 leading-relaxed">
+              This deployment is not connected to your machine kubeconfig. Run the backend agent on the machine that owns
+              the cluster, mount kubeconfig, and point this frontend to that backend URL.
+            </p>
+          </div>
+        </div>
+      )}
 
       {selectedCluster && (
         <div
