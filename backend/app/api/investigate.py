@@ -12,6 +12,11 @@ from app.services.progress_publisher import ProgressPublisher
 
 router = APIRouter()
 
+NO_CLUSTER_MESSAGE = (
+    "No Kubernetes kubeconfig is available to this backend. "
+    "Run the backend agent on the machine that has cluster access, or mount kubeconfig into the deployment."
+)
+
 
 class InvestigationRequest(BaseModel):
     user_id: str | None = None
@@ -79,6 +84,16 @@ def _friendly_kubectl_error(error: str | None) -> str:
     return error
 
 
+def _empty_cluster_response(message: str) -> dict:
+    return {
+        "contexts": [],
+        "count": 0,
+        "mode": "local",
+        "demo_mode": False,
+        "setup_error": message,
+    }
+
+
 @router.get("/clusters")
 async def list_clusters():
     """
@@ -92,18 +107,25 @@ async def list_clusters():
             "demo_mode": True,
         }
 
-    # Pick up any clusters created since startup and refresh kind addresses.
-    sync_kubeconfig()
+    try:
+        # Pick up any clusters created since startup and refresh kind addresses.
+        sync_kubeconfig()
 
-    # Validate kubectl is accessible
-    health_check = run_kubectl(["version", "--client"], timeout=10)
-    if not health_check.success and "not found" in (health_check.error or "").lower():
-        raise HTTPException(
-            status_code=503,
-            detail=_friendly_kubectl_error(health_check.error),
-        )
+        # Validate kubectl is accessible.
+        health_check = run_kubectl(["version", "--client"], timeout=10)
+        if not health_check.success:
+            detail = _friendly_kubectl_error(health_check.error)
+            if "kubectl is not installed" in detail:
+                return _empty_cluster_response(detail)
+            logger.warning("kubectl client check failed: {}", health_check.error)
 
-    contexts = list_kube_contexts(include_status=True)
+        contexts = list_kube_contexts(include_status=True)
+    except Exception as exc:
+        logger.exception("Cluster discovery failed: {}", exc)
+        return _empty_cluster_response(_friendly_kubectl_error(str(exc)))
+
+    if not contexts:
+        return _empty_cluster_response(NO_CLUSTER_MESSAGE)
 
     return {
         "contexts": contexts,

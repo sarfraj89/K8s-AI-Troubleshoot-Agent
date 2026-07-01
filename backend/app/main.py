@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from loguru import logger
 
 from app.api import health, investigate
@@ -41,6 +42,14 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health.router, prefix="/health", tags=["health"])
     app.include_router(investigate.router, tags=["investigation"])
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(_request, exc: Exception):
+        logger.exception("Unhandled API error: {}", exc)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "error": str(exc)},
+        )
 
     @app.on_event("startup")
     async def startup_event():

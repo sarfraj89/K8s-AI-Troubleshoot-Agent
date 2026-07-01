@@ -36,15 +36,23 @@ def sync_kubeconfig() -> None:
         return
 
     target = _target_path()
-    os.makedirs(os.path.dirname(target), exist_ok=True)
-    shutil.copyfile(HOST_KUBECONFIG, target)
+    try:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copyfile(HOST_KUBECONFIG, target)
+    except OSError as exc:
+        logger.warning("Could not sync kubeconfig from {} to {}: {}", HOST_KUBECONFIG, target, exc)
+        return
 
-    clusters = subprocess.run(
-        ["kubectl", "--kubeconfig", target, "config", "get-clusters"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        clusters = subprocess.run(
+            ["kubectl", "--kubeconfig", target, "config", "get-clusters"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        logger.warning("kubectl not found; kubeconfig sync skipped")
+        return
 
     for line in clusters.stdout.splitlines():
         name = line.strip()
@@ -56,10 +64,14 @@ def sync_kubeconfig() -> None:
         # kind cluster "kind-X" -> control-plane container "X-control-plane".
         cluster = name[len("kind-"):]
         server = f"https://{cluster}-control-plane:6443"
-        subprocess.run(
-            ["kubectl", "--kubeconfig", target, "config", "set-cluster", name, f"--server={server}"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        try:
+            subprocess.run(
+                ["kubectl", "--kubeconfig", target, "config", "set-cluster", name, f"--server={server}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            logger.warning("kubectl not found; kubeconfig sync stopped")
+            return
         logger.info("kubeconfig sync: {} -> {}", name, server)

@@ -57,6 +57,7 @@ export interface ClusterListResponse {
   count: number;
   mode?: 'local' | 'demo';
   demo_mode?: boolean;
+  setup_error?: string;
 }
 
 // Investigation Progress Types

@@ -13,15 +13,18 @@ export function ClusterSelector({ selectedContext, onSelect, onReadyChange }: Cl
   const [contexts, setContexts] = useState<KubeContext[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   const fetchClusters = async () => {
     setLoading(true);
     setError(null);
+    setSetupError(null);
     try {
-      const { contexts: fetched, demo_mode } = await investigationApi.getClusters();
+      const { contexts: fetched, demo_mode, setup_error } = await investigationApi.getClusters();
       setContexts(fetched);
       setIsDemoMode(Boolean(demo_mode));
+      setSetupError(setup_error || null);
 
       // Auto-select current context if nothing selected yet
       if (!selectedContext) {
@@ -84,9 +87,12 @@ export function ClusterSelector({ selectedContext, onSelect, onReadyChange }: Cl
     return (
       <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
         <AlertCircle className="w-5 h-5 text-amber-450 mt-0.5 flex-shrink-0" />
-        <p className="text-sm text-amber-300 leading-relaxed">
-          No Kubernetes clusters found. Make sure your kubeconfig is configured with at least one context.
-        </p>
+        <div>
+          <p className="text-sm font-semibold text-amber-300">No Kubernetes clusters found</p>
+          <p className="text-sm text-amber-200/80 mt-1 leading-relaxed">
+            {setupError || 'Make sure your kubeconfig is configured with at least one context.'}
+          </p>
+        </div>
       </div>
     );
   }
