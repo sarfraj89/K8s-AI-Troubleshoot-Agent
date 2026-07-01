@@ -26,12 +26,16 @@ const mergeProgressUpdate = (
 export function useInvestigationProgress(userId: string | undefined) {
   const [progress, setProgress] = useState<ProgressUpdate[]>(createInitialProgress);
   const [hasRealtimeUpdates, setHasRealtimeUpdates] = useState(false);
+  const [shouldSubscribe, setShouldSubscribe] = useState(false);
   const hasRealtimeUpdatesRef = useRef(false);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !shouldSubscribe) return;
 
     const channel = CHANNELS.USER_PROGRESS(userId);
+    const handleRealtimeError = () => {
+      // Fallback progress keeps the UI usable when realtime is not authorized.
+    };
     const handleProgress = (message: ProgressUpdate) => {
       hasRealtimeUpdatesRef.current = true;
       setHasRealtimeUpdates(true);
@@ -40,29 +44,31 @@ export function useInvestigationProgress(userId: string | undefined) {
 
     try {
       insforgeClient.realtime.on<ProgressUpdate>('progress', handleProgress);
-      insforgeClient.realtime.on('error', (error) => {
-        console.warn('InsForge realtime error:', error);
-      });
+      insforgeClient.realtime.on('error', handleRealtimeError);
 
-      insforgeClient.realtime.connect().then(async () => {
-        const subscription = await insforgeClient.realtime.subscribe(channel);
-        if (!subscription.ok) {
-          console.warn('Failed to subscribe to progress channel:', subscription.error);
-        }
-      });
+      insforgeClient.realtime
+        .connect()
+        .then(async () => {
+          await insforgeClient.realtime.subscribe(channel);
+        })
+        .catch(() => {
+          // Fallback progress covers unavailable realtime.
+        });
 
       return () => {
         insforgeClient.realtime.off('progress', handleProgress);
+        insforgeClient.realtime.off('error', handleRealtimeError);
         insforgeClient.realtime.unsubscribe(channel);
       };
     } catch (error) {
-      console.warn('Failed to subscribe to progress updates:', error);
+      // Fallback progress covers unavailable realtime.
     }
-  }, [userId]);
+  }, [userId, shouldSubscribe]);
 
   const resetProgress = () => {
     hasRealtimeUpdatesRef.current = false;
     setHasRealtimeUpdates(false);
+    setShouldSubscribe(true);
     setProgress(createInitialProgress());
   };
 
@@ -99,10 +105,12 @@ export function useInvestigationProgress(userId: string | undefined) {
   };
 
   const completeProgress = () => {
+    setShouldSubscribe(false);
     setProgress((prev) => prev.map((step) => ({ ...step, status: 'completed' })));
   };
 
   const failProgress = () => {
+    setShouldSubscribe(false);
     setProgress((prev) =>
       prev.map((step) =>
         step.status === 'completed' ? step : { ...step, status: 'error' },

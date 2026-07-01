@@ -40,6 +40,9 @@ def _friendly_kubectl_error(error: str | None) -> str:
 
     err = error.lower()
 
+    if "nonetype" in err or "none type" in err:
+        return NO_CLUSTER_MESSAGE
+
     if "kubectl not found" in err or "no such file" in err:
         return (
             "kubectl is not installed or not on PATH.\n"

@@ -132,9 +132,11 @@ def _context_metadata() -> dict[str, dict[str, str]]:
         return {}
 
     metadata: dict[str, dict[str, str]] = {}
-    for item in (result.data or {}).get("contexts", []):
+    for item in (result.data or {}).get("contexts") or []:
+        if not isinstance(item, dict):
+            continue
         name = item.get("name")
-        context = item.get("context", {})
+        context = item.get("context") or {}
         if not name:
             continue
         metadata[name] = {
