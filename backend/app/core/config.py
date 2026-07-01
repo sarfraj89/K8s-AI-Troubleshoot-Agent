@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     INSFORGE_API_KEY: Optional[str] = None
     INSFORGE_ANON_KEY: Optional[str] = None
     FRONTEND_URL: Optional[str] = None
+    CORS_ALLOWED_ORIGINS: Optional[str] = None
 
     @property
     def kubeconfig(self) -> Optional[str]:

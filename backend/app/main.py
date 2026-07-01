@@ -8,13 +8,20 @@ from app.kubernetes.kubeconfig_sync import sync_kubeconfig
 
 
 def _allowed_origins() -> list[str]:
-    origins = [
+    origins = {
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-    ]
+        "https://k8s-ai-troubleshoot-agent.vercel.app",
+    }
     if settings.FRONTEND_URL:
-        origins.append(settings.FRONTEND_URL.rstrip("/"))
-    return origins
+        origins.add(settings.FRONTEND_URL.rstrip("/"))
+    if settings.CORS_ALLOWED_ORIGINS:
+        origins.update(
+            origin.strip().rstrip("/")
+            for origin in settings.CORS_ALLOWED_ORIGINS.split(",")
+            if origin.strip()
+        )
+    return sorted(origins)
 
 def create_app() -> FastAPI:
     app = FastAPI(
