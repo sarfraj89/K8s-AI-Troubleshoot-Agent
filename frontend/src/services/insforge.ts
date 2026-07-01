@@ -20,6 +20,8 @@ export const getInvestigationProgressChannel = (userId: string) => `investigatio
 // Database table names
 export const TABLES = {
   INVESTIGATIONS: 'investigations',
+  CONNECTED_CLUSTERS: 'connected_clusters',
+  CLUSTER_AGENT_EVENTS: 'cluster_agent_events',
 };
 
 // Realtime channels

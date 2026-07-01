@@ -60,6 +60,56 @@ export interface ClusterListResponse {
   setup_error?: string;
 }
 
+// Connected cloud/in-cluster agent types
+export type ClusterProvider = 'aws' | 'azure' | 'gcp' | 'local' | 'custom';
+
+export type ConnectedClusterStatus = 'pending' | 'connected' | 'disconnected' | 'revoked';
+
+export interface ConnectedCluster {
+  id: string;
+  user_id: string;
+  name: string;
+  provider: ClusterProvider;
+  status: ConnectedClusterStatus;
+  agent_version?: string | null;
+  cluster_uid?: string | null;
+  kube_version?: string | null;
+  last_heartbeat_at?: string | null;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClusterAgentEvent {
+  id: string;
+  cluster_id: string;
+  event_type: string;
+  message?: string | null;
+  payload?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ConnectClusterResponse {
+  cluster: ConnectedCluster;
+  agent_token: string;
+  helm_command: string;
+}
+
+export interface InvestigationJob {
+  id: string;
+  cluster_id: string;
+  user_id: string;
+  type: 'investigate';
+  namespace: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  requested_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  evidence?: Record<string, unknown> | null;
+  diagnosis?: DiagnosisResult | null;
+  error?: string | null;
+}
+
 // Investigation Progress Types
 export type ProgressStep = 'pods' | 'logs' | 'events' | 'deployments' | 'network' | 'ai' | 'complete';
 

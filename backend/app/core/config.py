@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     INSFORGE_ANON_KEY: Optional[str] = None
     FRONTEND_URL: Optional[str] = None
     CORS_ALLOWED_ORIGINS: Optional[str] = None
+    AGENT_STORE_PATH: str = "/tmp/k8s-ai-agent-store.json"
+    PUBLIC_BACKEND_URL: Optional[str] = None
 
     @property
     def kubeconfig(self) -> Optional[str]:

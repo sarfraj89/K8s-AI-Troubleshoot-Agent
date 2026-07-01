@@ -4,6 +4,7 @@ import { ProgressTracker } from './ProgressTracker';
 import { DiagnosisCard } from './DiagnosisCard';
 import { InvestigationHistory } from './InvestigationHistory';
 import { ClusterSelector } from './ClusterSelector';
+import { ConnectedClusters } from './ConnectedClusters';
 import { DiagnosisResult, InvestigationResponse } from '../types';
 import { investigationApi } from '../services/api';
 import { CHANNELS, insforgeClient, TABLES } from '../services/insforge';
@@ -201,6 +202,8 @@ export function Dashboard() {
             <DiagnosisCard diagnosis={diagnosis} />
           </div>
         )}
+
+        {user?.id && <ConnectedClusters userId={user.id} />}
 
         {/* History */}
         <div className="bg-slate-900/20 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-xl">

@@ -1,5 +1,12 @@
 import axios, { AxiosError } from 'axios';
-import { ClusterListResponse, InvestigationResponse } from '../types';
+import {
+  ClusterListResponse,
+  ClusterProvider,
+  ConnectClusterResponse,
+  ConnectedCluster,
+  InvestigationJob,
+  InvestigationResponse,
+} from '../types';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -68,6 +75,36 @@ export const investigationApi = {
    */
   async health() {
     const { data } = await apiClient.get('/health');
+    return data;
+  },
+};
+
+export const connectedClusterApi = {
+  async list(userId: string): Promise<{ clusters: ConnectedCluster[] }> {
+    const { data } = await apiClient.get('/connected-clusters', {
+      params: { user_id: userId },
+    });
+    return data;
+  },
+
+  async create(payload: {
+    user_id: string;
+    name: string;
+    provider: ClusterProvider;
+  }): Promise<ConnectClusterResponse> {
+    const { data } = await apiClient.post('/connected-clusters', payload);
+    return data;
+  },
+
+  async investigate(payload: {
+    clusterId: string;
+    userId: string;
+    namespace?: string;
+  }): Promise<{ job: InvestigationJob }> {
+    const { data } = await apiClient.post(`/connected-clusters/${payload.clusterId}/investigate`, {
+      user_id: payload.userId,
+      namespace: payload.namespace || 'default',
+    });
     return data;
   },
 };

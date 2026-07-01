@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from app.api import health, investigate
+from app.api import connected_clusters, health, investigate
 from app.core.config import settings
 from app.kubernetes.kubeconfig_sync import sync_kubeconfig
 
@@ -42,6 +42,8 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health.router, prefix="/health", tags=["health"])
     app.include_router(investigate.router, tags=["investigation"])
+    app.include_router(connected_clusters.router)
+    app.include_router(connected_clusters.agent_router)
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(_request, exc: Exception):

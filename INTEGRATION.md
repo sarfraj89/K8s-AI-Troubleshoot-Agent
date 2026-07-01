@@ -168,6 +168,58 @@ CREATE TABLE public.progress_updates (
 CREATE INDEX idx_progress_updates_investigation_id ON public.progress_updates(investigation_id);
 ```
 
+**Table: `public.connected_clusters` (Phase 1 for in-cluster agents)**
+
+Run the full schema in [`docs/connected-clusters-schema.sql`](./docs/connected-clusters-schema.sql).
+
+This table tracks clusters connected by a lightweight agent installed inside EKS,
+AKS, GKE, local kind/minikube, or any Kubernetes cluster.
+
+Key columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Cluster connection id |
+| user_id | UUID | Owner in `auth.users` |
+| name | TEXT | User-visible cluster name |
+| provider | TEXT | `aws`, `azure`, `gcp`, `local`, or `custom` |
+| status | TEXT | `pending`, `connected`, `disconnected`, or `revoked` |
+| agent_token_hash | TEXT | Hashed token for the future in-cluster agent |
+| agent_version | TEXT | Agent version reported by heartbeat |
+| cluster_uid | TEXT | Kubernetes cluster UID when available |
+| kube_version | TEXT | Kubernetes version reported by heartbeat |
+| last_heartbeat_at | timestamptz | Last successful agent heartbeat |
+| metadata | JSONB | Provider labels/region/account metadata |
+
+The companion `public.cluster_agent_events` table stores future agent lifecycle
+events such as install, heartbeat, disconnect, token rotation, and investigation
+job transitions.
+
+### Phase 4: In-Cluster Agent MVP
+
+The cloud-cluster path uses a read-only polling agent:
+
+1. User creates a connected cluster in the dashboard.
+2. Backend returns a one-time visible agent token and Helm install command.
+3. User installs `charts/k8s-ai-agent` into EKS, AKS, GKE, or another cluster.
+4. Agent sends `POST /agent/heartbeat`.
+5. User queues an investigation with `POST /connected-clusters/{id}/investigate`.
+6. Agent polls `GET /agent/jobs/next`, collects evidence, and posts the result.
+7. Backend runs the existing AI diagnosis on submitted evidence.
+
+For local chart testing:
+
+```bash
+docker build -t k8s-ai-agent:0.1.0 ./agent
+
+helm install k8s-ai-agent ./charts/k8s-ai-agent \
+  --namespace k8s-ai-agent \
+  --create-namespace \
+  --set backendUrl=http://host.docker.internal:8000 \
+  --set clusterId=<cluster-id> \
+  --set agentToken=<agent-token>
+```
+
 ### Phase 3: Frontend Setup
 
 #### 3.1 Install Dependencies
