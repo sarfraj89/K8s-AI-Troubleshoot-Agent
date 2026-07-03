@@ -49,7 +49,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   };
 
   const isVerificationRequiredError = (err: unknown) =>
-    /verification required|verify your email|email verification required|otp/i.test(getErrorMessage(err));
+    /forbidden|verification required|verify your email|email verification required|email.*not.*verified|otp/i.test(
+      getErrorMessage(err),
+    );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

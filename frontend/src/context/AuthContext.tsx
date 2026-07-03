@@ -82,7 +82,7 @@ function isVerificationRequiredError(error: unknown) {
 
   return (
     statusCode === 403 ||
-    /verification required|verify your email|email verification required|email.*not.*verified|otp/i.test(message)
+    /forbidden|verification required|verify your email|email verification required|email.*not.*verified|otp/i.test(message)
   );
 }
 
@@ -210,34 +210,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        if (isVerificationRequiredError(error)) {
+          setState({
+            user: null,
+            loading: false,
+            error: null,
+          });
+          return { requiresVerification: true, email };
+        }
+
         throw new Error(error?.message || 'Signup failed');
       }
 
       const requiresVerification = requiresVerificationFromResponse(data);
 
-      if (requiresVerification) {
-        setState({
-          user: null,
-          loading: false,
-          error: null,
-        });
-        return { requiresVerification: true, email };
-      }
-
-      if (!data?.user) {
+      if (!data?.user && !requiresVerification) {
         throw new Error('Signup failed');
       }
 
+      // InsForge email/password signup sends a verification code before the user can sign in.
       setState({
-        user: {
-          id: data.user.id,
-          email: data.user.email || '',
-        },
+        user: null,
         loading: false,
         error: null,
       });
 
-      return { requiresVerification: false, email };
+      return { requiresVerification: true, email };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Signup failed';
       setState({
