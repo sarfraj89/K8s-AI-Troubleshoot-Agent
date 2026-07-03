@@ -50,9 +50,40 @@ function getErrorMessage(error: unknown) {
   return '';
 }
 
+function getErrorStatusCode(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  const statusCode = (error as { statusCode?: unknown }).statusCode;
+  if (typeof statusCode === 'number') {
+    return statusCode;
+  }
+
+  const responseStatus = (error as { response?: { status?: unknown } }).response?.status;
+  if (typeof responseStatus === 'number') {
+    return responseStatus;
+  }
+
+  const responseData = (error as { response?: { data?: unknown } }).response?.data;
+  if (responseData && typeof responseData === 'object') {
+    const dataStatusCode = (responseData as { statusCode?: unknown }).statusCode;
+    if (typeof dataStatusCode === 'number') {
+      return dataStatusCode;
+    }
+  }
+
+  return undefined;
+}
+
 function isVerificationRequiredError(error: unknown) {
   const message = getErrorMessage(error);
-  return /verification required|verify your email|email verification required|otp/i.test(message);
+  const statusCode = getErrorStatusCode(error);
+
+  return (
+    statusCode === 403 ||
+    /verification required|verify your email|email verification required|email.*not.*verified|otp/i.test(message)
+  );
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -73,6 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         response.requiresVerification ||
         response.verificationRequired ||
         response.otpRequired ||
+        (response.user &&
+          typeof response.user === 'object' &&
+          (response.user as { emailVerified?: unknown }).emailVerified === false) ||
         ((response.accessToken === undefined || response.accessToken === null || response.accessToken === '') &&
           (response.user || response.message || response.detail)),
     );
